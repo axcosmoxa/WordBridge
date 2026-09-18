@@ -33,19 +33,31 @@ actor APIClient {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("WordBridge/1.0 (iOS)", forHTTPHeaderField: "User-Agent")
         do {
             let (data, resp) = try await session.data(for: req)
-            guard let http = resp as? HTTPURLResponse else { throw APIError.network }
+            guard let http = resp as? HTTPURLResponse else {
+                debugPrint("[API] no HTTP response for", url)
+                throw APIError.network
+            }
             if http.statusCode == 404 { throw APIError.notFound }
-            guard (200...299).contains(http.statusCode) else { throw APIError.network }
+            guard (200...299).contains(http.statusCode) else {
+                debugPrint("[API] status", http.statusCode, "for", url, "body:", String(data: data.prefix(300), encoding: .utf8) ?? "")
+                throw APIError.network
+            }
             let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            do {
+                return try decoder.decode(T.self, from: data)
+            } catch {
+                debugPrint("[API] decoding failed for", url, "error:", error, "body:", String(data: data.prefix(500), encoding: .utf8) ?? "")
+                throw APIError.decoding
+            }
         } catch let e as APIError {
             throw e
         } catch is DecodingError {
             throw APIError.decoding
         } catch {
-            // URLError etc
+            debugPrint("[API] network error for", url, error)
             throw APIError.network
         }
     }

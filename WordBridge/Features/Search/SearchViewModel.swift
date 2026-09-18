@@ -76,10 +76,7 @@ final class SearchViewModel: ObservableObject {
                 }
                 return
             }
-            if self.isOffline {
-                self.state = .failure(APIError.network.userMessage)
-                return
-            }
+            // Try network even if monitor says offline — let URLSession report real error
             await self.fetchAndUpdate(parsed: parsed, cached: nil)
         }
         await searchTask?.value
@@ -92,7 +89,18 @@ final class SearchViewModel: ObservableObject {
             case .english:
                 // English word or phrase: use dictionary + translate to Hindi
                 let baseWord = parsed.targetWord.isEmpty ? parsed.cleaned : parsed.targetWord
-                var e = try await DictionaryService.shared.lookupEnglish(baseWord)
+                var e: WordEntry
+                do {
+                    e = try await DictionaryService.shared.lookupEnglish(baseWord)
+                } catch let err as APIError where err == .notFound || err == .network {
+                    // Fallback: create minimal entry from translation so user still gets Hindi even if dictionary is down
+                    let hi = await TranslationService.shared.englishToHindi(baseWord)
+                    if let hi = hi {
+                        e = WordEntry(query: baseWord, language: .english, translation: hi, definition: hi, simpleDefinition: hi, synonyms: [], source: "mymemory-fallback")
+                    } else {
+                        throw err
+                    }
+                }
                 // If phrase/sentence, keep original query
                 if parsed.kind == .sentence || parsed.kind == .phrase {
                     e.query = parsed.original.trimmed
@@ -148,8 +156,14 @@ final class SearchViewModel: ObservableObject {
                 entry = e
             case .unknown:
                 // fallback english
-                var e = try await DictionaryService.shared.lookupEnglish(parsed.cleaned)
-                e.translation = await TranslationService.shared.englishToHindi(parsed.cleaned)
+                var e: WordEntry
+                do {
+                    e = try await DictionaryService.shared.lookupEnglish(parsed.cleaned)
+                } catch {
+                    let hi = await TranslationService.shared.englishToHindi(parsed.cleaned)
+                    e = WordEntry(query: parsed.cleaned, language: .english, translation: hi, definition: hi ?? parsed.cleaned, synonyms: [], source: "fallback")
+                }
+                e.translation = await TranslationService.shared.englishToHindi(parsed.cleaned) ?? e.translation
                 entry = e
             }
             await CacheService.shared.store(entry)
