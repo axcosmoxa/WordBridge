@@ -431,7 +431,7 @@
 			name = WordBridgeWidget;
 			productName = WordBridgeWidget;
 			productReference = D0BB4F4E759C451F8B48F2F7 /* WordBridgeWidget.appex */;
-			productType = "com.apple.product-type.widgetkit-extension";
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
