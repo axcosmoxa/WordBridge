@@ -88,23 +88,28 @@ final class SearchViewModel: ObservableObject {
             let entry: WordEntry
             switch parsed.detectedLanguage {
             case .english:
-                // English word or phrase: use dictionary + translate to Hindi
+                // English word or phrase: use dictionary + translate to Hindi concurrently
                 let baseWord = parsed.targetWord.isEmpty ? parsed.cleaned : parsed.targetWord
+                let queryCopyForTrans = parsed.kind == .sentence || parsed.kind == .phrase ? parsed.original.trimmed : baseWord
+
+                async let dictTask = try? DictionaryService.shared.lookupEnglish(baseWord)
+                async let hiQueryTask = TranslationService.shared.englishToHindi(queryCopyForTrans)
+
+                let (dictOpt, hiQueryOpt) = await (dictTask, hiQueryTask)
+
                 var e: WordEntry
-                do {
-                    e = try await DictionaryService.shared.lookupEnglish(baseWord)
-                } catch let err as APIError where err == .notFound || err == .network {
-                    // Fallback: create minimal entry from translation so user still gets Hindi even if dictionary is down
-                    let hi = await TranslationService.shared.englishToHindi(baseWord)
-                    if let hi = hi {
-                        e = WordEntry(query: baseWord, language: .english, translation: hi, definition: hi, simpleDefinition: hi, synonyms: [], source: "mymemory-fallback")
-                    } else {
-                        throw err
-                    }
+                if let dict = dictOpt {
+                    e = dict
+                    if let h = hiQueryOpt { e.translation = h }
+                } else if let h = hiQueryOpt {
+                    e = WordEntry(query: baseWord, language: .english, translation: h, definition: h, simpleDefinition: h, synonyms: [], source: "mymemory-fallback")
+                } else {
+                    throw APIError.notFound
                 }
+
                 // If phrase/sentence, keep original query
                 if parsed.kind == .sentence || parsed.kind == .phrase {
-                    e.query = parsed.original.trimmed
+                    e.query = queryCopyForTrans
                     // Context
                     if let kw = QueryParser.extractKeyword(from: parsed.cleaned) {
                         if let ctx = await ContextService.shared.contextualMeaning(for: kw, in: parsed.cleaned) {
@@ -121,32 +126,27 @@ final class SearchViewModel: ObservableObject {
                 } else {
                     e.query = baseWord
                 }
-                // Fast path: show definition immediately, enrich Hindi concurrently
-                var fastEntry = e
-                if fastEntry.simpleDefinition == nil { fastEntry.simpleDefinition = fastEntry.definition }
+
+                if e.simpleDefinition == nil { e.simpleDefinition = e.definition }
                 // Show immediately for perceived speed
-                self.state = .success(fastEntry)
-                self.recentEntry = fastEntry
-                // Concurrent translation (much faster than sequential) — capture copies for Swift 6
-                let queryCopy = e.query
+                self.state = .success(e)
+                self.recentEntry = e
+
+                // Concurrent secondary translations (definition, example)
                 let defCopy = e.definition
                 let exCopy = e.example
-                async let hiQuery = TranslationService.shared.englishToHindi(queryCopy)
                 async let hiDef: String? = {
                     if let def = defCopy { return await TranslationService.shared.englishToHindi(def) } else { return nil }
                 }()
                 async let hiExample: String? = {
                     if let ex = exCopy { return await TranslationService.shared.englishToHindi(ex) } else { return nil }
                 }()
-                let (hq, hd, he) = await (hiQuery, hiDef, hiExample)
-                if let hi = hq {
-                    e.translation = hi
-                } else if let hd = hd {
+
+                let (hd, he) = await (hiDef, hiExample)
+                if e.translation == nil, let hd = hd {
                     e.translation = hd
                 }
                 e.exampleTranslation = he
-                // Fill simpleDefinition if missing
-                if e.simpleDefinition == nil { e.simpleDefinition = e.definition }
                 entry = e
             case .hindi:
                 // Hindi -> English
@@ -170,14 +170,18 @@ final class SearchViewModel: ObservableObject {
                 entry = e
             case .unknown:
                 // fallback english
+                async let dictTask = try? DictionaryService.shared.lookupEnglish(parsed.cleaned)
+                async let hiTask = TranslationService.shared.englishToHindi(parsed.cleaned)
+
+                let (dictOpt, hiOpt) = await (dictTask, hiTask)
+
                 var e: WordEntry
-                do {
-                    e = try await DictionaryService.shared.lookupEnglish(parsed.cleaned)
-                } catch {
-                    let hi = await TranslationService.shared.englishToHindi(parsed.cleaned)
-                    e = WordEntry(query: parsed.cleaned, language: .english, translation: hi, definition: hi ?? parsed.cleaned, synonyms: [], source: "fallback")
+                if let dict = dictOpt {
+                    e = dict
+                    if let h = hiOpt { e.translation = h }
+                } else {
+                    e = WordEntry(query: parsed.cleaned, language: .english, translation: hiOpt, definition: hiOpt ?? parsed.cleaned, synonyms: [], source: "fallback")
                 }
-                e.translation = await TranslationService.shared.englishToHindi(parsed.cleaned) ?? e.translation
                 entry = e
             }
             await CacheService.shared.store(entry)

@@ -19,7 +19,7 @@ final class SpeechService: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-IN")) ?? SFSpeechRecognizer()
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN")) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
         updateAuth()
     }
 
@@ -59,7 +59,7 @@ final class SpeechService: NSObject, ObservableObject {
         request = SFSpeechAudioBufferRecognitionRequest()
         guard let request = request else { return false }
         request.shouldReportPartialResults = true
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN")) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
         let inputNode = audioEngine.inputNode
         let fmt = inputNode.outputFormat(forBus: 0)
         inputNode.removeTap(onBus: 0)

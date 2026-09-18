@@ -28,14 +28,22 @@ actor DictionaryService: DictionaryServiceProtocol {
     private func map(dto: DictionaryEntryDTO, query: String) -> WordEntry {
         let phonetic = dto.phonetic ?? dto.phonetics?.first(where: { $0.text != nil })?.text
         let audio = dto.phonetics?.first(where: { $0.audio != nil && !($0.audio!.isEmpty) })?.audio
-        let firstMeaning = dto.meanings?.first
-        let def = firstMeaning?.definitions?.first?.definition
-        let example = firstMeaning?.definitions?.first?.example
+
+        var def: String? = nil
+        var example: String? = nil
+        var pos: String? = nil
         var syns: [String] = []
-        if let s = firstMeaning?.synonyms { syns.append(contentsOf: s) }
-        if let s = firstMeaning?.definitions?.first?.synonyms { syns.append(contentsOf: s) }
+
+        for meaning in dto.meanings ?? [] {
+            if pos == nil { pos = meaning.partOfSpeech }
+            if let s = meaning.synonyms { syns.append(contentsOf: s) }
+            for d in meaning.definitions ?? [] {
+                if def == nil { def = d.definition }
+                if example == nil { example = d.example }
+                if let s = d.synonyms { syns.append(contentsOf: s) }
+            }
+        }
         syns = Array(Set(syns)).prefix(5).map { $0 }
-        let pos = firstMeaning?.partOfSpeech
 
         // Hindi translation via MyMemory will be filled later by callers if needed; do initial empty
         return WordEntry(
