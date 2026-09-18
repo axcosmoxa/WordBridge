@@ -36,7 +36,14 @@ struct SearchField: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.separator), lineWidth: 0.5))
 
-                Button(action: onMic) {
+                Menu {
+                    Button(action: { NotificationCenter.default.post(name: Notification.Name("SetVoiceLangEN"), object: nil) }) {
+                        Label("English Voice", systemImage: "a")
+                    }
+                    Button(action: { NotificationCenter.default.post(name: Notification.Name("SetVoiceLangHI"), object: nil) }) {
+                        Label("Hindi Voice", systemImage: "character.book.closed")
+                    }
+                } label: {
                     Image(systemName: isRecording ? "mic.fill" : "mic")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(isRecording ? .white : .blue)
@@ -44,9 +51,11 @@ struct SearchField: View {
                         .background(isRecording ? Color.red : Color(.secondarySystemBackground))
                         .clipShape(Circle())
                         .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
+                } primaryAction: {
+                    onMic()
                 }
                 .accessibilityLabel(isRecording ? "Stop recording" : "Voice search")
-                .accessibilityHint("Tap to speak your word")
+                .accessibilityHint("Tap to speak, press and hold to change language")
             }
             if !text.isEmpty && language != .unknown {
                 HStack {

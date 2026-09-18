@@ -35,11 +35,23 @@ actor TranslationService: TranslationServiceProtocol {
 
     func hindiToEnglish(_ word: String) async -> [String] {
         do {
-            let t = try await translate(word, from: "hi", to: "en")
-            // Split by comma/semicolon
-            let parts = t.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            // also try to get matches for alternatives
-            return parts.isEmpty ? [t] : parts
+            let q = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word
+            let urlStr = "https://api.mymemory.translated.net/get?q=\(q)&langpair=hi|en"
+            guard let url = URL(string: urlStr) else { return [] }
+            let resp: MyMemoryResponse = try await client.get(url, as: MyMemoryResponse.self)
+
+            var results: [String] = []
+            if let t = resp.responseData?.translatedText, !t.isEmpty {
+                results.append(t)
+            }
+            if let matches = resp.matches {
+                for m in matches {
+                    if let t = m.translation, !t.isEmpty, !results.map({ $0.lowercased() }).contains(t.lowercased()) {
+                        results.append(t)
+                    }
+                }
+            }
+            return results
         } catch {
             return []
         }

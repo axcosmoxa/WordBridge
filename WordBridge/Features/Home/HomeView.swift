@@ -152,6 +152,14 @@ struct HomeView: View {
                     appState.pendingShareText = nil
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SetVoiceLangEN"))) { _ in
+                speech.selectedLocale = "en-IN"
+                Haptics.light()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SetVoiceLangHI"))) { _ in
+                speech.selectedLocale = "hi-IN"
+                Haptics.light()
+            }
             .onChange(of: speech.isRecording) { recording in
                 if !recording, !speech.transcript.trimmed.isEmpty {
                     vm.query = speech.transcript

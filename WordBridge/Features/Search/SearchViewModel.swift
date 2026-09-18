@@ -102,7 +102,8 @@ final class SearchViewModel: ObservableObject {
                     e = dict
                     if let h = hiQueryOpt { e.translation = h }
                 } else if let h = hiQueryOpt {
-                    e = WordEntry(query: baseWord, language: .english, translation: h, definition: h, simpleDefinition: h, synonyms: [], source: "mymemory-fallback")
+                    let syns = await DictionaryService.shared.lookupSynonyms(baseWord)
+                    e = WordEntry(query: baseWord, language: .english, translation: h, definition: h, simpleDefinition: h, synonyms: syns, source: "mymemory-fallback")
                 } else {
                     throw APIError.notFound
                 }
@@ -180,7 +181,8 @@ final class SearchViewModel: ObservableObject {
                     e = dict
                     if let h = hiOpt { e.translation = h }
                 } else {
-                    e = WordEntry(query: parsed.cleaned, language: .english, translation: hiOpt, definition: hiOpt ?? parsed.cleaned, synonyms: [], source: "fallback")
+                    let syns = await DictionaryService.shared.lookupSynonyms(parsed.cleaned)
+                    e = WordEntry(query: parsed.cleaned, language: .english, translation: hiOpt, definition: hiOpt ?? parsed.cleaned, synonyms: syns, source: "fallback")
                 }
                 entry = e
             }

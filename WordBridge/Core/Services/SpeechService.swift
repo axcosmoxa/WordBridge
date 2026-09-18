@@ -11,6 +11,13 @@ final class SpeechService: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var transcript: String = ""
     @Published var authorization: SpeechAuthorizationStatus = .notDetermined
+    @Published var selectedLocale: String = "en-IN" {
+        didSet {
+            if !isRecording {
+                recognizer = SFSpeechRecognizer(locale: Locale(identifier: selectedLocale)) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
+            }
+        }
+    }
 
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
@@ -19,7 +26,7 @@ final class SpeechService: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN")) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: selectedLocale)) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
         updateAuth()
     }
 
@@ -59,7 +66,7 @@ final class SpeechService: NSObject, ObservableObject {
         request = SFSpeechAudioBufferRecognitionRequest()
         guard let request = request else { return false }
         request.shouldReportPartialResults = true
-        recognizer = SFSpeechRecognizer(locale: Locale(identifier: "hi-IN")) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: selectedLocale)) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-IN"))
         let inputNode = audioEngine.inputNode
         let fmt = inputNode.outputFormat(forBus: 0)
         inputNode.removeTap(onBus: 0)

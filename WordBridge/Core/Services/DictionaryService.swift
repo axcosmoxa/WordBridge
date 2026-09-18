@@ -2,12 +2,26 @@ import Foundation
 
 protocol DictionaryServiceProtocol: Sendable {
     func lookupEnglish(_ word: String) async throws -> WordEntry
+    func lookupSynonyms(_ word: String) async -> [String]
 }
 
 actor DictionaryService: DictionaryServiceProtocol {
     static let shared = DictionaryService()
     private let client = APIClient.shared
     private let cache = CacheService.shared
+
+    struct DatamuseWord: Codable { let word: String }
+
+    func lookupSynonyms(_ word: String) async -> [String] {
+        guard let url = URL(string: "https://api.datamuse.com/words?rel_syn=\(word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? word)") else { return [] }
+        do {
+            let data = try await URLSession.shared.data(from: url).0
+            let items = try JSONDecoder().decode([DatamuseWord].self, from: data)
+            return Array(items.prefix(5).map { $0.word })
+        } catch {
+            return []
+        }
+    }
 
     func lookupEnglish(_ word: String) async throws -> WordEntry {
         let q = word.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
