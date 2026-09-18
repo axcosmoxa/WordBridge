@@ -122,9 +122,47 @@ struct HomeView: View {
                     Task { await vm.performSearch(pending) }
                     appState.pendingShareText = nil
                 }
+                if appState.pendingListen {
+                    appState.pendingListen = false
+                    Task { await handleMic() }
+                }
+            }
+            .onChange(of: appState.pendingListen) { v in
+                if v {
+                    appState.pendingListen = false
+                    Task { await handleMic() }
+                }
+            }
+            .onChange(of: appState.pendingShareText) { v in
+                if let t = v {
+                    vm.query = t
+                    Task { await vm.performSearch(t) }
+                    appState.pendingShareText = nil
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 Task { await appState.checkClipboard() }
+                if appState.pendingListen {
+                    appState.pendingListen = false
+                    Task { await handleMic() }
+                }
+                if let t = appState.pendingShareText {
+                    vm.query = t
+                    Task { await vm.performSearch(t) }
+                    appState.pendingShareText = nil
+                }
+            }
+            .onChange(of: speech.isRecording) { recording in
+                if !recording, !speech.transcript.trimmed.isEmpty {
+                    vm.query = speech.transcript
+                    Task { await vm.performSearch(speech.transcript) }
+                    Haptics.success()
+                }
+            }
+            .onChange(of: speech.transcript) { t in
+                if !speech.isRecording, !t.trimmed.isEmpty {
+                    // widget hands-free: already handled above
+                }
             }
         }
         .alert("Microphone Access", isPresented: $showPermissionAlert) {

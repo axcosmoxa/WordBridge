@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import WidgetKit
 
 @MainActor
 final class SearchViewModel: ObservableObject {
@@ -120,17 +121,27 @@ final class SearchViewModel: ObservableObject {
                 } else {
                     e.query = baseWord
                 }
-                // Translate to Hindi
-                if let hi = await TranslationService.shared.englishToHindi(e.query) {
+                // Fast path: show definition immediately, enrich Hindi concurrently
+                var fastEntry = e
+                if fastEntry.simpleDefinition == nil { fastEntry.simpleDefinition = fastEntry.definition }
+                // Show immediately for perceived speed
+                self.state = .success(fastEntry)
+                self.recentEntry = fastEntry
+                // Concurrent translation (much faster than sequential)
+                async let hiQuery = TranslationService.shared.englishToHindi(e.query)
+                async let hiDef: String? = {
+                    if let def = e.definition { return await TranslationService.shared.englishToHindi(def) } else { return nil }
+                }()
+                async let hiExample: String? = {
+                    if let ex = e.example { return await TranslationService.shared.englishToHindi(ex) } else { return nil }
+                }()
+                let (hq, hd, he) = await (hiQuery, hiDef, hiExample)
+                if let hi = hq {
                     e.translation = hi
-                } else if let def = e.definition {
-                    // fallback: translate definition
-                    e.translation = await TranslationService.shared.englishToHindi(def)
+                } else if let hd = hd {
+                    e.translation = hd
                 }
-                // example translation
-                if let ex = e.example {
-                    e.exampleTranslation = await TranslationService.shared.englishToHindi(ex)
-                }
+                e.exampleTranslation = he
                 // Fill simpleDefinition if missing
                 if e.simpleDefinition == nil { e.simpleDefinition = e.definition }
                 entry = e
@@ -170,6 +181,18 @@ final class SearchViewModel: ObservableObject {
             await HistoryService.shared.add(entry)
             state = .success(entry)
             recentEntry = entry
+            // Update widget (App Group) for mic widget
+            if let d = UserDefaults(suiteName: "group.com.wordbridge.app") {
+                d.set(entry.query, forKey: "widget_lastQuery")
+                d.set(entry.translation ?? entry.definition, forKey: "widget_lastTranslation")
+            }
+            if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.wordbridge.app")?.appendingPathComponent("WidgetCache.json") {
+                let dict = ["q": entry.query, "t": entry.translation ?? entry.definition ?? ""]
+                if let data = try? JSONEncoder().encode(dict) {
+                    try? data.write(to: url)
+                }
+            }
+            WidgetCenter.shared.reloadAllTimelines()
         } catch let err as APIError {
             // Prefer cached fallback
             if let c = cached {
