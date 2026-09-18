@@ -16,9 +16,10 @@ final class SearchViewModel: ObservableObject {
 
     init() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                self?.isOffline = path.status != .satisfied
-                self?.isOfflineBanner = path.status != .satisfied
+            let offline = path.status != .satisfied
+            DispatchQueue.main.async {
+                self?.isOffline = offline
+                self?.isOfflineBanner = offline
             }
         }
         monitor.start(queue: DispatchQueue.global(qos: .background))
@@ -57,7 +58,11 @@ final class SearchViewModel: ObservableObject {
             self.detectedLanguage = parsed.detectedLanguage
 
             // Cache-first
-            if let cached = await CacheService.shared.cachedEntry(for: parsed.targetWord) ?? await CacheService.shared.cachedEntry(for: trimmed) {
+            var cached: WordEntry? = await CacheService.shared.cachedEntry(for: parsed.targetWord)
+            if cached == nil {
+                cached = await CacheService.shared.cachedEntry(for: trimmed)
+            }
+            if let cached = cached {
                 // Determine if we need to enrich cache with translation still missing?
                 self.state = .success(cached)
                 self.recentEntry = cached
