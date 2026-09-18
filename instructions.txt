@@ -1,0 +1,1504 @@
+# Build a Native iOS App: Instant English ↔ Hindi Word Explainer
+
+## ROLE
+
+You are a senior native iOS engineer specializing in Swift 6, SwiftUI, accessibility, and Apple's system frameworks.
+
+Build this as a **native iOS application**, not React Native, Flutter, Expo, or a web wrapper.
+
+Prioritize:
+
+* Extremely fast interaction
+* Minimal UI
+* Native iOS behavior
+* Offline-friendly operation
+* Low battery usage
+* Accessibility
+* Simple maintainable architecture
+* iPhone-first UX
+* iOS 16+ compatibility
+
+Do not over-engineer the application.
+
+---
+
+# 1. PRODUCT
+
+Build a small educational utility for parents, teachers, and students who need to understand English or Hindi words instantly while studying.
+
+### Core problem
+
+While teaching a child, the teacher/parent may encounter a word they don't know well.
+
+They should be able to:
+
+> **See word → tap/share/speak → immediately understand it**
+
+without navigating through multiple screens.
+
+The application should work in both directions:
+
+**English → Hindi**
+
+and
+
+**Hindi → English**
+
+The app is NOT intended to be a traditional dictionary with complicated navigation.
+
+It is an **instant word explainer for study time**.
+
+---
+
+# 2. PRIMARY UX PRINCIPLE
+
+## MINIMUM INTERACTION
+
+This is the most important product requirement.
+
+A user should ideally need:
+
+**1 action → result**
+
+Examples:
+
+### Typing
+
+Open app → type `adapt`
+
+Immediately show the result.
+
+### Voice
+
+Open app → tap microphone → say:
+
+> "What does perseverance mean?"
+
+Show the result.
+
+### Share Sheet
+
+In another application:
+
+Select `photosynthesis`
+
+→ Share
+
+→ this app
+
+→ directly show the result.
+
+### Textbook sentence
+
+Paste:
+
+> Animals adapt to their environment.
+
+The app should identify useful vocabulary and allow the user to understand the words in context.
+
+Do NOT make users:
+
+Search → select language → select dictionary → select result → open details.
+
+Language should be detected automatically whenever possible.
+
+---
+
+# 3. TARGET DEVICES
+
+Minimum:
+
+**iOS 16.0**
+
+Primary devices:
+
+* iPhone 13
+* iPhone 13 mini
+* iPhone 13 Pro
+* iPhone 13 Pro Max
+* iPhone 14 family
+* iPhone 15 family
+* iPhone 16 family
+* newer compatible iPhones
+
+The UI must also adapt correctly to different screen sizes.
+
+Do not use APIs that require iOS 17/18 unless there is an explicit availability check and a meaningful fallback.
+
+Prefer APIs available on iOS 16.
+
+---
+
+# 4. TECH STACK
+
+Use:
+
+* Swift 6
+* SwiftUI
+* SwiftData if supported appropriately for the deployment target; otherwise use Apple's supported local persistence approach compatible with iOS 16
+* URLSession
+* async/await
+* Codable
+* NaturalLanguage framework
+* Speech framework
+* AVFoundation / AVFAudio where appropriate
+* UserNotifications only if actually needed
+* UniformTypeIdentifiers
+* Share Extension
+* App Intents only where supported and useful
+* SF Symbols
+
+Do NOT introduce third-party dependencies unless absolutely necessary.
+
+The initial application should have **zero unnecessary external dependencies**.
+
+---
+
+# 5. NO ACCOUNT
+
+The application must NOT require:
+
+* Login
+* Sign up
+* Email
+* Phone number
+* Cloud account
+* Subscription
+* Payment
+
+The application should be usable immediately after installation.
+
+---
+
+# 6. NO BACKEND FOR MVP
+
+The MVP should not require our own backend.
+
+Use public/free resources wherever possible.
+
+The app should be designed around:
+
+1. Free dictionary resources
+2. Local caching
+3. Local persistence
+4. Native iOS functionality
+
+Do not create a server merely to proxy a free public API.
+
+If an external service requires a private API key, do not embed that key inside the iOS application.
+
+---
+
+# 7. HOME SCREEN
+
+The home screen should be extremely minimal.
+
+Conceptually:
+
+```text
+                WordBridge
+
+       What do you want to understand?
+
+   ┌─────────────────────────────────┐
+   │ 🔍  Type a word or sentence...  │
+   └─────────────────────────────────┘
+
+          🎙 Speak
+
+─────────────────────────────────────
+
+Recent
+
+adapt
+परिस्थिति
+photosynthesis
+resilient
+```
+
+Do not fill the screen with cards, banners, illustrations, statistics, or unnecessary controls.
+
+The search field is the primary element.
+
+---
+
+# 8. SEARCH FIELD
+
+The search field must support:
+
+### Single word
+
+```text
+adapt
+```
+
+### Hindi word
+
+```text
+परिस्थिति
+```
+
+### Phrase
+
+```text
+take something for granted
+```
+
+### Sentence
+
+```text
+Animals adapt to their environment.
+```
+
+### Question
+
+```text
+What does resilient mean?
+```
+
+The app should intelligently determine what the user entered.
+
+---
+
+# 9. AUTOMATIC LANGUAGE DETECTION
+
+Do not ask:
+
+> English or Hindi?
+
+before every lookup.
+
+Detect language automatically using Apple's NaturalLanguage framework and/or dictionary response characteristics.
+
+Examples:
+
+```text
+adapt
+→ English
+
+परिस्थिति
+→ Hindi
+
+अनुकूल
+→ Hindi
+
+resilient
+→ English
+```
+
+If detection is ambiguous, show a tiny non-blocking language indicator that can be changed manually.
+
+Do not interrupt the lookup flow with a language-selection screen.
+
+---
+
+# 10. RESULT EXPERIENCE
+
+The result should appear immediately below the search field or as a very lightweight result transition.
+
+Avoid unnecessary navigation.
+
+For a normal word:
+
+```text
+adapt
+/əˈdæpt/                         🔊
+
+verb
+
+अनुकूल होना · ढलना
+
+To change something or yourself
+to work in a new situation.
+
+────────────────────────
+
+SIMILAR WORDS
+
+adjust · modify · change
+
+────────────────────────
+
+EXAMPLE
+
+Animals adapt to their environment.
+
+जानवर अपने वातावरण के अनुसार ढलते हैं.
+
+                         ☆
+```
+
+The user should understand the word without needing another tap.
+
+---
+
+# 11. INFORMATION PRIORITY
+
+Show information in this order:
+
+### 1. Word
+
+### 2. Pronunciation
+
+### 3. Part of speech
+
+### 4. Primary meaning
+
+### 5. Hindi/English equivalent
+
+### 6. Simple explanation
+
+### 7. Similar words
+
+### 8. Example
+
+### 9. Related words
+
+Do not show everything returned by a dictionary API.
+
+Filter the information to what is useful to a student/teacher.
+
+---
+
+# 12. ENGLISH → HINDI
+
+Example:
+
+Input:
+
+```text
+resilient
+```
+
+Result:
+
+```text
+resilient
+
+adjective
+
+मज़बूत · कठिनाइयों से उबरने वाला
+
+Simple meaning:
+Able to recover after difficulties.
+
+Example:
+Children can be surprisingly resilient.
+```
+
+The Hindi explanation should be natural rather than a literal machine translation whenever reliable data is available.
+
+---
+
+# 13. HINDI → ENGLISH
+
+Input:
+
+```text
+परिस्थिति
+```
+
+Result:
+
+```text
+परिस्थिति
+
+English:
+
+situation
+circumstance
+condition
+
+Simple meaning:
+
+The situation or conditions surrounding
+a person or event.
+
+Example:
+
+We must understand the situation first.
+```
+
+---
+
+# 14. SYNONYMS ARE NOT JUST A LIST
+
+This is important.
+
+Do not simply show:
+
+```text
+big
+large
+huge
+enormous
+```
+
+Instead, where enough information exists, explain usage differences.
+
+Example:
+
+```text
+BIG
+General and common.
+
+LARGE
+More formal or factual.
+
+HUGE
+Very large.
+
+ENORMOUS
+Extremely large.
+```
+
+This section should appear only when useful.
+
+Do not create artificial distinctions where the data does not support them.
+
+---
+
+# 15. CONTEXT MODE
+
+If the user enters a sentence, do not treat it as a normal dictionary word.
+
+Example:
+
+```text
+The bank is near the river.
+```
+
+Identify:
+
+```text
+bank
+```
+
+and understand its contextual meaning.
+
+Show:
+
+```text
+bank
+
+Here it means:
+
+the land beside a river.
+
+Hindi:
+नदी का किनारा
+```
+
+Provide a simple option:
+
+**Explain sentence**
+
+which explains the entire sentence in simple English/Hindi.
+
+---
+
+# 16. "EXPLAIN SIMPLY"
+
+This is an important feature.
+
+The user can enter complicated textbook language.
+
+Example:
+
+```text
+Photosynthesis is the process by which
+green plants convert light energy into
+chemical energy.
+```
+
+The app should provide:
+
+### Simple English
+
+```text
+Plants use sunlight to make their food.
+```
+
+### सरल हिंदी
+
+```text
+पौधे सूर्य के प्रकाश की मदद से
+अपना भोजन बनाते हैं।
+```
+
+This feature should be optional and clearly separated from dictionary data.
+
+Do not pretend that generated explanations are dictionary definitions.
+
+---
+
+# 17. TEACHER MODE
+
+Include a lightweight toggle:
+
+```text
+Teacher Mode
+```
+
+When enabled, results should additionally show:
+
+### Explain to a child
+
+A short, age-appropriate explanation.
+
+Example:
+
+```text
+adapt
+
+For a child:
+
+"Adapt means changing yourself
+so you can live or work well
+in a new situation."
+
+हिंदी:
+
+"अनुकूल होना यानी नई परिस्थिति
+के अनुसार अपने आप को ढालना।"
+```
+
+Keep explanations short.
+
+No long AI-generated essays.
+
+---
+
+# 18. VOICE INPUT
+
+Use Apple's Speech framework where available.
+
+The user should be able to tap:
+
+🎙
+
+and speak:
+
+> "What does perseverance mean?"
+
+The app should extract:
+
+```text
+perseverance
+```
+
+and immediately perform the lookup.
+
+If the user says:
+
+> "What is the difference between affect and effect?"
+
+recognize this as a comparison request.
+
+Do not require the user to manually type the words.
+
+Handle speech permission gracefully.
+
+If permission is denied, continue supporting typing.
+
+---
+
+# 19. TEXT-TO-SPEECH
+
+Every word should have a small pronunciation button.
+
+Use Apple's native speech/audio capabilities where appropriate.
+
+Do not require a third-party pronunciation service just for basic pronunciation.
+
+If an API provides a native pronunciation audio URL, use it where available.
+
+Provide a fallback.
+
+---
+
+# 20. SHARE EXTENSION
+
+Implement a Share Extension for text.
+
+The user should be able to:
+
+1. Select a word in Safari, Books, Notes, PDF reader, etc.
+2. Tap Share.
+3. Select this application.
+4. Immediately see the explanation.
+
+If multiple words or a sentence are shared, analyze the text intelligently.
+
+The Share Extension must preserve the minimum-interaction principle.
+
+Do not force the user through the home screen first.
+
+---
+
+# 21. COPY/PASTE EXPERIENCE
+
+If the user opens the app after copying a word or sentence, provide a subtle action such as:
+
+```text
+Copied text detected
+
+"photosynthesis"
+
+        Explain
+```
+
+Do not continuously monitor the clipboard in the background.
+
+Only inspect clipboard content at an appropriate user-driven moment, such as app launch/foreground when permitted by iOS behavior.
+
+Respect Apple's privacy expectations.
+
+---
+
+# 22. SEARCH HISTORY
+
+Keep a completely local history.
+
+Example:
+
+```text
+Recent
+
+Today
+adapt
+photosynthesis
+परिस्थिति
+
+Yesterday
+resilient
+circumstance
+```
+
+History should require no account.
+
+Allow:
+
+* Open previous lookup
+* Delete individual item
+* Clear history
+
+Do not make history a complicated separate feature.
+
+---
+
+# 23. SAVED WORDS
+
+A small bookmark button:
+
+```text
+☆ Save
+```
+
+When saved:
+
+```text
+★ Saved
+```
+
+Saved words are stored locally.
+
+A simple Saved screen:
+
+```text
+Saved
+
+adapt
+resilient
+circumstance
+परिस्थिति
+```
+
+No social features.
+
+No cloud sync in MVP.
+
+---
+
+# 24. OFFLINE-FIRST BEHAVIOR
+
+The application should cache previously searched words.
+
+If the user previously searched:
+
+```text
+adapt
+```
+
+then searching it again should use local cached data when appropriate.
+
+Show a subtle offline state if the network is unavailable.
+
+Do not display a giant error page.
+
+Example:
+
+```text
+You're offline
+
+Showing saved dictionary information.
+```
+
+Previously cached results must remain accessible.
+
+---
+
+# 25. API/DATA ARCHITECTURE
+
+Create a clean abstraction:
+
+```text
+DictionaryService
+TranslationService
+ContextService
+SpeechService
+CacheService
+HistoryService
+```
+
+Do not couple SwiftUI views directly to API calls.
+
+For example:
+
+```text
+SearchView
+    ↓
+SearchViewModel
+    ↓
+DictionaryService
+    ↓
+API / Local Cache
+```
+
+The UI must not know how the dictionary API works.
+
+This will allow the free API provider to be replaced later.
+
+---
+
+# 26. FREE DATA SOURCES
+
+For the MVP, investigate and use reliable free/public dictionary resources.
+
+Potential sources include:
+
+* Free Dictionary API for English dictionary data
+* Wiktionary/open multilingual dictionary data
+* Other genuinely free/open resources for English ↔ Hindi
+
+Before implementation, verify:
+
+* current availability
+* rate limits
+* API terms
+* response structure
+* Hindi coverage
+* pronunciation availability
+* example availability
+* commercial-use restrictions
+
+Do not assume an API is free forever merely because it has a public endpoint.
+
+Keep the data-provider layer replaceable.
+
+---
+
+# 27. API FAILURE HANDLING
+
+If the API fails:
+
+Do not show:
+
+```text
+HTTP 500
+JSON decoding failed
+URLSession error
+```
+
+Show:
+
+```text
+Couldn't find that right now.
+
+Check your connection and try again.
+```
+
+Provide:
+
+```text
+Retry
+```
+
+For cached results, prefer showing the cached result rather than failing.
+
+---
+
+# 28. SEARCH BEHAVIOR
+
+Search should feel instantaneous.
+
+Use:
+
+* debounce where appropriate
+* local cache first
+* async network requests
+* cancellation of obsolete searches
+* loading state only when necessary
+
+Do not send a network request for every character typed.
+
+For example:
+
+```text
+r
+re
+res
+resi
+resil
+resili
+```
+
+should NOT produce six API requests.
+
+Search should normally execute when:
+
+* the user submits
+* the user pauses appropriately
+* or a direct lookup is requested through Share/voice.
+
+---
+
+# 29. MINIMUM TAPS PRINCIPLE
+
+Always prefer:
+
+### GOOD
+
+```text
+Open → Type → Result
+```
+
+### BAD
+
+```text
+Open
+→ Choose English
+→ Choose Dictionary
+→ Type
+→ Tap Search
+→ Select result
+→ Select Meaning
+```
+
+Always choose the first approach.
+
+If information can be shown inline without navigation, show it inline.
+
+If a secondary action can be performed with one tap, do not create another screen.
+
+---
+
+# 30. UI DESIGN
+
+Visual direction:
+
+> **Minimal, calm, native iOS utility with typography as the primary design element, generous whitespace, subtle separators, SF Symbols, semantic system colors, small animations, and almost no decorative UI.**
+
+Avoid:
+
+* gradients everywhere
+* excessive cards
+* giant illustrations
+* colorful dashboards
+* excessive shadows
+* unnecessary tab bars
+* gamification in the MVP
+* large buttons
+* decorative animations
+
+The application should feel like a **native Apple utility**, not a generic cross-platform template.
+
+---
+
+# 31. COLORS
+
+Use Apple's semantic system colors.
+
+Prefer:
+
+* systemBackground
+* secondarySystemBackground
+* label
+* secondaryLabel
+* tertiaryLabel
+* separator
+* systemBlue only where an interactive accent is required
+
+Support:
+
+* Light Mode
+* Dark Mode
+
+Do not hardcode colors unnecessarily.
+
+---
+
+# 32. TYPOGRAPHY
+
+Use native Dynamic Type.
+
+Suggested hierarchy:
+
+```text
+Word:
+largeTitle / title
+
+Pronunciation:
+subheadline
+
+Meaning:
+title3
+
+Definition:
+body
+
+Hindi translation:
+body
+
+Examples:
+callout
+
+Metadata:
+caption
+```
+
+Do not use custom fonts in MVP.
+
+Accessibility is more important than visual novelty.
+
+---
+
+# 33. ANIMATION
+
+Animations must be subtle.
+
+Allowed:
+
+* small fade
+* result appearance
+* search transition
+* bookmark feedback
+* microphone state transition
+
+Avoid:
+
+* bouncing cards
+* excessive spring animations
+* distracting transitions
+
+The user is using the app while teaching.
+
+The app should stay out of the way.
+
+---
+
+# 34. HAPTICS
+
+Use small native haptic feedback only for meaningful actions:
+
+* Save
+* Copy
+* Successful voice recognition where appropriate
+
+Do not add haptics everywhere.
+
+---
+
+# 35. NAVIGATION
+
+Keep navigation minimal.
+
+MVP structure:
+
+```text
+Home
+ ├── Search Result
+ ├── History
+ └── Saved
+```
+
+Settings can be a lightweight secondary screen.
+
+Do not create a complex tab hierarchy.
+
+If a result can remain on the Home screen, prefer that.
+
+---
+
+# 36. ACCESSIBILITY
+
+Support:
+
+* Dynamic Type
+* VoiceOver
+* sufficient contrast
+* accessibility labels
+* accessibility hints where useful
+* large text
+* Reduce Motion
+* button hit areas appropriate for touch
+
+Do not rely only on color to communicate state.
+
+---
+
+# 37. PRIVACY
+
+The app should be privacy-first.
+
+Do not collect:
+
+* names
+* email
+* contacts
+* location
+* advertising identifiers
+
+Do not send search history to a server unless explicitly required.
+
+Keep:
+
+* history
+* saved words
+* cached results
+
+locally on the device.
+
+Do not log user search queries in production logs.
+
+---
+
+# 38. DATA MODEL
+
+Create simple local models.
+
+Example:
+
+```text
+WordEntry
+
+id
+query
+language
+translation
+definition
+simpleDefinition
+partOfSpeech
+pronunciation
+example
+synonyms
+relatedWords
+source
+createdAt
+lastAccessedAt
+isSaved
+```
+
+Do not store unnecessary fields.
+
+Keep API DTOs separate from local persistence models where appropriate.
+
+---
+
+# 39. PROJECT STRUCTURE
+
+Use a clean native structure:
+
+```text
+WordBridge/
+    App/
+    Core/
+        Networking/
+        Persistence/
+        Services/
+        Utilities/
+    Features/
+        Home/
+        Search/
+        History/
+        Saved/
+        Settings/
+    Shared/
+        Components/
+        Models/
+    Resources/
+    Extensions/
+```
+
+Keep views focused on UI.
+
+Keep networking and business logic outside SwiftUI views.
+
+---
+
+# 40. AGENTS.md
+
+Create an `AGENTS.md` at the root of the project.
+
+It must define:
+
+* role
+* product overview
+* iOS deployment target
+* Swift/SwiftUI version
+* architecture
+* UI rules
+* networking rules
+* persistence rules
+* privacy rules
+* accessibility rules
+* dependency rules
+* testing rules
+* feature-by-feature development workflow
+
+Read `AGENTS.md` before implementing every subsequent feature.
+
+This follows the supplied practical vibe-coding workflow, where the project rules file is the source of truth and features are implemented one at a time.
+
+---
+
+# 41. DEVELOPMENT WORKFLOW
+
+DO NOT build the entire application in one huge implementation step.
+
+Work in phases.
+
+## Phase 1
+
+Create:
+
+* Xcode project
+* SwiftUI structure
+* iOS 16 deployment target
+* AGENTS.md
+* basic design system
+* Home screen
+* search field
+
+Verify it builds.
+
+## Phase 2
+
+Implement:
+
+* language detection
+* English dictionary lookup
+* result UI
+
+Verify.
+
+## Phase 3
+
+Implement:
+
+* Hindi support
+* English ↔ Hindi behavior
+* caching
+
+Verify.
+
+## Phase 4
+
+Implement:
+
+* history
+* saved words
+
+Verify.
+
+## Phase 5
+
+Implement:
+
+* voice input
+* pronunciation
+
+Verify.
+
+## Phase 6
+
+Implement:
+
+* Share Extension
+
+Verify on a real iPhone.
+
+## Phase 7
+
+Implement:
+
+* context/sentence mode
+* Explain Simply
+* Teacher Mode
+
+Verify.
+
+## Phase 8
+
+Polish:
+
+* animations
+* haptics
+* accessibility
+* dark mode
+* error states
+* offline behavior
+
+Verify.
+
+## Phase 9
+
+Production testing.
+
+---
+
+# 42. FEATURE PROMPT RULE
+
+For every implementation step:
+
+1. Read AGENTS.md.
+2. Implement ONE feature only.
+3. Keep the existing UI intact.
+4. Do not introduce unnecessary dependencies.
+5. Build the project.
+6. Test the new feature.
+7. Test previously working features.
+8. Report changed files.
+9. Report any limitations.
+10. Only then move to the next feature.
+
+Do not combine unrelated features into one coding task.
+
+The supplied practical workflow explicitly recommends one task per prompt, verification after each feature, and a targeted fix prompt when something breaks.
+
+---
+
+# 43. IMPORTANT CONSTRAINTS
+
+Do NOT:
+
+* build Android
+* use React Native
+* use Expo
+* use Flutter
+* add authentication
+* add subscriptions
+* add ads
+* add unnecessary analytics
+* add a backend for MVP
+* add a database server
+* add unnecessary packages
+* create a complicated onboarding flow
+* create a dashboard
+* create unnecessary screens
+* continuously monitor clipboard
+* expose API secrets
+* send search history to a remote server
+* add features not specified here
+* redesign existing screens during unrelated feature work
+
+---
+
+# 44. ONBOARDING
+
+There should be either:
+
+### No onboarding
+
+or at most:
+
+### One screen
+
+```text
+Understand any word.
+English ↔ हिंदी
+
+Meaning · Examples · Vocabulary
+
+              Start
+```
+
+Do not create a 5-screen onboarding sequence.
+
+The application should be useful immediately.
+
+---
+
+# 45. EMPTY STATE
+
+Home:
+
+```text
+What would you like to understand?
+```
+
+History:
+
+```text
+No words yet.
+
+Words you look up will appear here.
+```
+
+Saved:
+
+```text
+No saved words yet.
+
+Tap ☆ on a word to save it.
+```
+
+Keep empty states simple.
+
+---
+
+# 46. DEFINITION OF DONE
+
+The MVP is complete only when:
+
+* It builds successfully with iOS 16 deployment target.
+* It runs on a physical iPhone 13 or newer.
+* English word lookup works.
+* Hindi word lookup works.
+* English ↔ Hindi results work.
+* Meaning appears without unnecessary navigation.
+* Synonyms appear where available.
+* Example sentences appear where available.
+* Pronunciation works.
+* Search history works locally.
+* Saved words work locally.
+* Previously searched words can be retrieved from cache.
+* API failures have friendly UI.
+* No-network behavior is handled.
+* Dark Mode works.
+* Dynamic Type works.
+* VoiceOver labels exist for interactive controls.
+* No account is required.
+* No secret API keys are embedded in the application.
+* No unnecessary third-party dependencies are introduced.
+* Share Extension can receive selected text.
+* Existing functionality continues working after each feature.
+* The app has been tested on a real iPhone.
+
+---
+
+# 47. FINAL UX TEST
+
+Before considering the app finished, perform this exact test on a physical iPhone:
+
+### Test 1
+
+Open app.
+
+Search:
+
+```text
+adapt
+```
+
+Expected:
+
+**one simple result immediately.**
+
+### Test 2
+
+Search:
+
+```text
+परिस्थिति
+```
+
+Expected:
+
+English equivalents immediately.
+
+### Test 3
+
+Paste:
+
+```text
+Animals adapt to their environment.
+```
+
+Expected:
+
+Context-aware explanation.
+
+### Test 4
+
+Select a word from another application.
+
+Share → WordBridge.
+
+Expected:
+
+Direct explanation.
+
+### Test 5
+
+Tap microphone.
+
+Say:
+
+> "What does resilient mean?"
+
+Expected:
+
+Result without manual typing.
+
+### Test 6
+
+Turn off internet.
+
+Search a previously searched word.
+
+Expected:
+
+Cached result.
+
+### Test 7
+
+Enable large text.
+
+Expected:
+
+UI remains usable.
+
+### Test 8
+
+Enable VoiceOver.
+
+Expected:
+
+All primary actions are understandable.
+
+---
+
+# MOST IMPORTANT PRODUCT RULE
+
+Whenever there are two possible implementations, choose the one that requires **fewer interactions from the teacher**.
+
+The app should disappear into the teaching workflow.
+
+The ideal experience is:
+
+> **See a word → get curious → one action → understand it → continue teaching.**
+
+Do not turn this into a conventional dictionary application.
+
+Build a **fast, quiet, context-aware English ↔ Hindi teaching companion.**

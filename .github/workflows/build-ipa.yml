@@ -1,0 +1,42 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 15.4
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || true
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build Archive (no signing)
+        run: |
+          xcodebuild archive -sdk iphoneos \
+            -project WordBridge.xcodeproj \
+            -scheme WordBridge \
+            -configuration Release \
+            -archivePath WordBridge.xcarchive \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package to IPA
+        run: |
+          mkdir -p Payload
+          cp -r WordBridge.xcarchive/Products/Applications/WordBridge.app Payload/
+          zip -qr WordBridge.ipa Payload
+          ls -lh WordBridge.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WordBridge-IPA
+          path: WordBridge.ipa
