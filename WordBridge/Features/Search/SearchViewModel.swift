@@ -18,12 +18,12 @@ final class SearchViewModel: ObservableObject {
     init() {
         monitor.pathUpdateHandler = { [weak self] path in
             let offline = path.status != .satisfied
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
                 self?.isOffline = offline
                 self?.isOfflineBanner = offline
             }
         }
-        monitor.start(queue: DispatchQueue.global(qos: .background))
+        monitor.start(queue: DispatchQueue.main)
     }
 
     deinit { monitor.cancel() }
@@ -127,13 +127,16 @@ final class SearchViewModel: ObservableObject {
                 // Show immediately for perceived speed
                 self.state = .success(fastEntry)
                 self.recentEntry = fastEntry
-                // Concurrent translation (much faster than sequential)
-                async let hiQuery = TranslationService.shared.englishToHindi(e.query)
+                // Concurrent translation (much faster than sequential) — capture copies for Swift 6
+                let queryCopy = e.query
+                let defCopy = e.definition
+                let exCopy = e.example
+                async let hiQuery = TranslationService.shared.englishToHindi(queryCopy)
                 async let hiDef: String? = {
-                    if let def = e.definition { return await TranslationService.shared.englishToHindi(def) } else { return nil }
+                    if let def = defCopy { return await TranslationService.shared.englishToHindi(def) } else { return nil }
                 }()
                 async let hiExample: String? = {
-                    if let ex = e.example { return await TranslationService.shared.englishToHindi(ex) } else { return nil }
+                    if let ex = exCopy { return await TranslationService.shared.englishToHindi(ex) } else { return nil }
                 }()
                 let (hq, hd, he) = await (hiQuery, hiDef, hiExample)
                 if let hi = hq {
